@@ -9,21 +9,6 @@ import tkinter.scrolledtext
 import PIL
 
 
-class OsMock(object):
-    @staticmethod
-    def rename(source, destination):
-        print(f'{source} -> {destination}')
-
-    class path(object):
-        @staticmethod
-        def exists(path):
-            return False
-
-
-# _os = OsMock()
-_os = os
-
-
 class ReportWindow(tk.simpledialog.Dialog):
     def __init__(self, root, title, infos, errors):
         self.infos = infos
@@ -72,38 +57,6 @@ class ImagePreview(tk.simpledialog.Dialog):
     def _scaled_size(width, height):
         scale = min(480.0 / width, 320.0 / height)
         return int(width * scale), int(height * scale)
-
-
-class Renaming(object):
-    IMAGES_EXT = ('.jpg', )
-
-    @classmethod
-    def matching(cls, path):
-        pass
-
-    @classmethod
-    def _rename(cls, source, destination):
-        ext = os.path.splitext(source)[1]
-        destination = os.path.join(os.path.dirname(source), destination)
-        addition = ''
-        index = 0
-        while _os.path.exists(destination + addition + ext):
-            index += 1
-            addition = f' ({index})'
-
-        destination = destination + addition + ext
-        _os.rename(source, destination)
-
-    @classmethod
-    def rename_name_shot_time(cls, path, name):
-        images = cls._files_in_dir(path)
-        # to_rename = [image for image in images if not image.startswith(name)]
-        for image in images:
-            date_str = image_exif.get_date(image)
-            if date_str is None:
-                print(f'No date information in {image}')
-                continue
-            cls._rename(image, name + date_str.strftime('%Y.%m.%d_%H.%M.%S'))
 
 
 class FileEntry(object):
