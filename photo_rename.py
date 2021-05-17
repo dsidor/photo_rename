@@ -1,11 +1,12 @@
 import datetime
 import os
+import sys
 import image_exif
-import easygui
 import tkinter as tk
 import tkinter.ttk as ttk
 import tkinter.simpledialog
 import tkinter.scrolledtext
+import tkinter.filedialog
 import PIL
 
 
@@ -77,6 +78,11 @@ class Gui(object):
         self._root.title('Photo rename')
         self._files = []
         self._entries = []  # type: [FileEntry]
+        self._default_dir = None
+        if len(sys.argv) > 1:
+            d = sys.argv[1]
+            if os.path.isdir(d) and os.path.exists:
+                self._default_dir = d
 
         top_frame = tk.Frame(self._root)
         self._select_files_button = tk.Button(top_frame, text="Select files",
@@ -137,8 +143,8 @@ class Gui(object):
     def _select_files_button_handle(self):
         # path = './fotos/'
         # files = [os.path.join(path, file) for file in os.listdir(path)]
-        files = easygui.fileopenbox("Select files to rename", "photo_rename", multiple=True)
-        if files is None:
+        files = [file.name for file in tk.filedialog.askopenfiles(initialdir=self._default_dir)]
+        if not files:
             return
         self._files = files
         self._recalculate_entries()
