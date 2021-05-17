@@ -182,9 +182,9 @@ class Gui(object):
         self._table.insert('', 'end', text=orig, values=(date, renamed))
 
     def _select_files_button_handle(self):
-        path = './fotos/'
-        files = [os.path.join(path, file) for file in os.listdir(path)]
-        # files = easygui.fileopenbox("Select files to rename","photo_rename", multiple=True)
+        # path = './fotos/'
+        # files = [os.path.join(path, file) for file in os.listdir(path)]
+        files = easygui.fileopenbox("Select files to rename", "photo_rename", multiple=True)
         if files is None:
             return
         self._files = files
