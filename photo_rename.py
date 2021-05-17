@@ -6,7 +6,7 @@ import tkinter as tk
 import tkinter.ttk as ttk
 import tkinter.simpledialog
 import tkinter.scrolledtext
-from tkinter import messagebox
+import PIL
 
 
 class OsMock(object):
@@ -50,6 +50,28 @@ class ReportWindow(tk.simpledialog.Dialog):
             error_widget.pack(fill='both', expand=True)
 
         frame.pack(expand=1, fill='both')
+
+
+class ImagePreview(tk.simpledialog.Dialog):
+    def __init__(self, root, path):
+        self.path = path
+        self.img = None
+        super().__init__(root, os.path.basename(path))
+
+    def body(self, frame):
+        img = PIL.Image.open(self.path)
+        width, height = self._scaled_size(*img.size)
+        img = img.resize((width, height))
+        canvas = tk.Canvas(frame, width=width, height=height)
+        self.img = PIL.ImageTk.PhotoImage(img)
+        canvas.create_image(width/2, height/2, anchor=tk.CENTER, image=self.img)
+        canvas.pack()
+        frame.pack()
+
+    @staticmethod
+    def _scaled_size(width, height):
+        scale = min(480.0 / width, 320.0 / height)
+        return int(width * scale), int(height * scale)
 
 
 class Renaming(object):
@@ -139,30 +161,22 @@ class Gui(object):
         rename_button.pack(fill='x', expand=True, padx=5, pady=5)
 
     def _table_double_click(self, event):
-        selection = self._table.selection()
-        if len(selection) == 0:
+        row, column = self._get_selection_row_col(event)
+
+        if 0 == column:
+            self.preview_image(self._entries[row].path)
             return
-        elif len(selection) != 1:
-            raise Exception('Incorrect handling of table selection')
-        row = self._table.identify_row(event.y)
-        orig_name = self._table.item(selection, "text")
-        row = [i for i, entry in enumerate(self._entries) if entry.name == orig_name]
-        if len(row) != 1:
-            raise Exception('Incorrect handling of table selection')
         else:
-            row = row[0]
+            answer = tk.simpledialog.askstring("Change name to",
+                                               f"original name: {self._entries[row].name}\n"
+                                               f"date of shot:    {self._entries[row].date}",
+                                               initialvalue=self._entries[row].after_prefix,
+                                               parent=self._root)
+            if answer is None:
+                return
 
-        answer = tk.simpledialog.askstring("Change name to",
-                                           f"original name: {self._entries[row].name}\n"
-                                           f"date of shot:    {self._entries[row].date}",
-                                           initialvalue=self._entries[row].after_prefix,
-                                           parent=self._root)
-
-        if answer is None:
-            return
-
-        self._entries[row].after_prefix = answer
-        self._redraw_table()
+            self._entries[row].after_prefix = answer
+            self._redraw_table()
 
     def insert_table(self, orig, date, renamed):
         self._table.insert('', 'end', text=orig, values=(date, renamed))
@@ -232,6 +246,9 @@ class Gui(object):
             os.rename(path, new_path)
             return f'{os.path.basename(path)} -> {new_name}'
 
+    def preview_image(self, path):
+        ImagePreview(self._root, path)
+
     def quit(self):
         self._root.destroy()
 
@@ -241,6 +258,22 @@ class Gui(object):
     def _show_report(self, info_text, error_text):
         title = 'Success' if not error_text else 'Errors occurred'
         ReportWindow(self._root, title, info_text, error_text)
+
+    def _get_selection_row_col(self, event):
+        selection = self._table.selection()
+        if len(selection) == 0:
+            return
+        elif len(selection) != 1:
+            raise Exception('Incorrect handling of table selection')
+        orig_name = self._table.item(selection, "text")
+        row = [i for i, entry in enumerate(self._entries) if entry.name == orig_name]
+        if len(row) != 1:
+            raise Exception('Incorrect handling of table selection')
+        else:
+            row = row[0]
+
+        column = int(self._table.identify_column(event.x).replace('#', ''))
+        return row, column
 
 
 def get_date(file):
