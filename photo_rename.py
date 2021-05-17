@@ -5,6 +5,7 @@ import easygui
 import tkinter as tk
 import tkinter.ttk as ttk
 import tkinter.simpledialog
+import tkinter.scrolledtext
 from tkinter import messagebox
 
 
@@ -21,6 +22,34 @@ class OsMock(object):
 
 # _os = OsMock()
 _os = os
+
+
+class ReportWindow(tk.simpledialog.Dialog):
+    def __init__(self, root, title, infos, errors):
+        self.infos = infos
+        self.errors = errors
+        super().__init__(root, title)
+
+    def body(self, frame):
+        if self.infos:
+            label_info = tk.Label(frame, text='Names changed:', font=('calibre', 12, 'bold'))
+            label_info.pack()
+
+            info_widget = tk.scrolledtext.ScrolledText(frame, height=5)
+            info_widget.insert('end', self.infos)
+            info_widget.config(state='disabled')
+            info_widget.pack(fill='both', expand=True)
+
+        if self.errors:
+            label_info = tk.Label(frame, text='Errors:', fg='red', font=('calibre', 12, 'bold'))
+            label_info.pack()
+
+            error_widget = tk.scrolledtext.ScrolledText(frame, height=5)
+            error_widget.insert('end', self.errors)
+            error_widget.config(state='disabled')
+            error_widget.pack(fill='both', expand=True)
+
+        frame.pack(expand=1, fill='both')
 
 
 class Renaming(object):
@@ -178,37 +207,40 @@ class Gui(object):
             self.insert_table(file.name, file.date, file.get_new_name(self._prefix_entry.get()))
 
     def _rename_button_handle(self):
+        changed = []
         errors = []
         for entry in self._entries:  # type: FileEntry
             try:
-                self._safe_rename(entry.path, entry.get_new_name(self._prefix_entry.get()))
+                changed.append(self._safe_rename(entry.path, entry.get_new_name(self._prefix_entry.get())))
             except Exception as ex:
                 errors.append(str(ex))
-        if errors:
-            tk.messagebox.showerror('Errors occurred', '\n'.join(errors))
-        else:
-            tk.messagebox.showinfo('Success', f'{len(self._entries)} files renamed')
+        self._show_report('\n'.join(changed), '\n'.join(errors))
 
-            self._files = []
-            self._entries = []
-            self._recalculate_entries()
+        self._files = []
+        self._entries = []
+        self._recalculate_entries()
 
     @staticmethod
     def _safe_rename(path, new_name):
         dir_name = os.path.dirname(path)
         new_path = os.path.join(dir_name, new_name)
         if path == new_path:
-            return
+            return f'The same name: {new_name}'
         if os.path.exists(new_path):
             raise Exception(f'File {new_name} already exists')
-        print(f'{path} -> {new_path}')
-        os.rename(path, new_path)
+        else:
+            os.rename(path, new_path)
+            return f'{os.path.basename(path)} -> {new_name}'
 
     def quit(self):
         self._root.destroy()
 
     def run(self):
         self._root.mainloop()
+
+    def _show_report(self, info_text, error_text):
+        title = 'Success' if not error_text else 'Errors occurred'
+        ReportWindow(self._root, title, info_text, error_text)
 
 
 def get_date(file):
