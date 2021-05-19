@@ -8,6 +8,7 @@ import tkinter.simpledialog
 import tkinter.scrolledtext
 import tkinter.filedialog
 import PIL
+import PIL.ImageTk
 
 
 class ReportWindow(tk.simpledialog.Dialog):
@@ -65,7 +66,7 @@ class FileEntry(object):
         self.path = path
         self.name = os.path.basename(self.path)
         self.date = get_date(self.path)
-        self.after_prefix = '_' + self.date
+        self.after_prefix = ' ' + self.date
 
     def get_new_name(self, prefix):
         return prefix + self.after_prefix + '.jpg'
@@ -95,14 +96,13 @@ class Gui(object):
         self._prefix_entry.pack(side=tk.LEFT, fill='x', expand=True, padx=5, pady=5)
         self._prefix_entry.bind('<KeyRelease>', lambda _: self._redraw_table())
         self._prefix_entry.bind('<FocusOut>', lambda _: self._redraw_table())
-        self._recalculate_button = tk.Button(top_frame, text="Reset names",
-                                             command=self._reset_button_handle)
-        self._recalculate_button.pack(side=tk.LEFT, anchor=tk.W, padx=5, pady=5)
+        rename_button = tk.Button(top_frame, text="Rename", command=self._rename_button_handle)
+        rename_button.pack(side=tk.LEFT, anchor=tk.W, padx=5, pady=5)
         top_frame.pack(anchor=tk.W, fill='x')
 
         frame = tk.Frame(self._root)
-        frame.pack(padx=5, pady=5, fill='x', expand=True)
-        self._table = ttk.Treeview(frame)
+        self._table = ttk.Treeview(frame, selectmode='browse')
+        self._root.minsize(width=400, height=300)
         self._table['columns'] = ('date', 'after')
         self._table.heading("#0", text='Original')
         self._table.column("#0", anchor="w", width=300)
@@ -110,14 +110,15 @@ class Gui(object):
         self._table.column('date', anchor='w', width=150)
         self._table.heading('after', text='Renamed')
         self._table.column('after', anchor='w', width=300)
-        self._table.grid(sticky=(tk.N, tk.S, tk.W, tk.E))
+        # self._table.grid(sticky=(tk.N, tk.S, tk.W, tk.E))
+        self._table.pack(padx=5, pady=5, fill='both', expand=True)
+        frame.pack(padx=5, pady=5, fill='both', expand=True)
+        scroll = ttk.Scrollbar(self._table, orient="vertical", command=self._table.yview)
+        scroll.pack(side='right', fill='y')
         frame.grid_rowconfigure(0, weight=1)
         frame.grid_columnconfigure(0, weight=1)
 
         self._table.bind('<Double-1>', self._table_double_click)
-
-        rename_button = tk.Button(self._root, text="Rename", command=self._rename_button_handle)
-        rename_button.pack(fill='x', expand=True, padx=5, pady=5)
 
     def _table_double_click(self, event):
         row, column = self._get_selection_row_col(event)
@@ -146,10 +147,8 @@ class Gui(object):
         files = [file.name for file in tk.filedialog.askopenfiles(initialdir=self._default_dir)]
         if not files:
             return
+        self._default_dir = os.path.dirname(files[0])
         self._files = files
-        self._recalculate_entries()
-
-    def _reset_button_handle(self):
         self._recalculate_entries()
 
     def _recalculate_entries(self):
